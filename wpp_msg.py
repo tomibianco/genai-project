@@ -1,6 +1,7 @@
 import os
 import requests
 from fastapi import FastAPI, Request, Query
+from fastapi.responses import JSONResponse, PlainTextResponse
 from dotenv import load_dotenv
 
 # Cargar variables de entorno
@@ -18,15 +19,19 @@ def read_root():
     return {"message": "API de WhatsApp funcionando correctamente"}
 
 
-@app.get("/webhook")
-def verify_token(hub_mode: str = Query(None), hub_challenge: str = Query(None), hub_verify_token: str = Query(None)):
-    # El token de verificación que te proporcionó Meta
-    WPP_VERIFY_TOKEN = "test"  # Cambia esto al token real proporcionado por Meta
-    
-    # Verifica que los parámetros son correctos
-    if hub_mode == "subscribe" and hub_verify_token == WPP_VERIFY_TOKEN:
-        return hub_challenge  # Devuelve el challenge para completar la verificación
-    return {"error": "Verificación fallida"}, 403
+@app.get("/webhook", response_class=PlainTextResponse)
+def verify_webhook(
+    hub_mode: str = Query(None),
+    hub_challenge: str = Query(None),
+    hub_verify_token: str = Query(None)
+):
+    try:
+        if hub_mode and hub_verify_token:
+            if hub_mode == "subscribe" and hub_verify_token == WPP_VERIFY_TOKEN:
+                return hub_challenge
+        raise Exception("Invalid request")
+    except Exception as e:
+        return JSONResponse(content={"success": False, "error": str(e)}, status_code=500)
 
 
 # Recibir mensajes de WhatsApp
